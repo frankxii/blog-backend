@@ -1,0 +1,12 @@
+#IDE
+.idea
+
+#env
+/venv/
+
+#python
+*.pyc
+/__pycache__/
+
+#setting
+env.json

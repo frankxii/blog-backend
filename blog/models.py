@@ -2,4 +2,5 @@ from django.db import models
 
 
 class Article(models.Model):
-    name = models.TextField(max_length=32)
+    title = models.TextField()
+    body = models.TextField()

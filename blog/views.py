@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, List
 
 import json
 import functools
@@ -11,6 +11,15 @@ from django.http.request import QueryDict
 
 if TYPE_CHECKING:
     from django.http.request import HttpRequest
+    from django.db.models import QuerySet
+
+
+def check_require_param(*args):
+    params_is_ok: bool = all(args)
+    if params_is_ok:
+        return True
+    else:
+        raise ValueError("缺少必要参数")
 
 
 def error_handler(view_name: str) -> function:
@@ -48,10 +57,13 @@ class ArticleView(View):
 
     @error_handler('Article')
     def get(self, request: HttpRequest):
+        """
+        获取文章详情
+        """
         # 参数获取与校验
         params: QueryDict = request.GET
         article_id: int = params.get("article_id")
-        self.check_require_param(article_id)
+        check_require_param(article_id)
         # 获取文章
         article: Dict = Article.objects.values('id', 'title', 'body').get(pk=article_id)
         return JsonResponse({
@@ -67,26 +79,27 @@ class ArticleView(View):
     def post(self, request: HttpRequest):
         """
         新增文章
-        Args:
-            request:
         """
         # 获取参数并校验
         form_date: QueryDict = request.POST
         title: str = form_date.get('title')
         body: str = form_date.get('body')
-        self.check_require_param(title, body)
+        check_require_param(title, body)
         # 创建文章
         Article.objects.create(title=title, body=body)
         return JsonResponse({'ret': 0, 'msg': 'ok'})
 
     @error_handler('Article')
     def put(self, request: HttpRequest):
+        """
+        修改文章
+        """
         # 获取参数并校验
         params: Dict = json.loads(request.body)
         article_id: int = params.get('article_id')
         title: str = params.get('title')
         body: str = params.get('body')
-        self.check_require_param(article_id, title, body)
+        check_require_param(article_id, title, body)
         # 获取文章并修改
         article: Article = Article.objects.get(pk=article_id)
         article.title = title
@@ -96,18 +109,40 @@ class ArticleView(View):
 
     @error_handler('Article')
     def delete(self, request: HttpRequest):
+        """
+        删除文章
+        """
         # 获取id并校验
         params: Dict = json.loads(request.body)
         article_id: int = params.get('article_id')
-        self.check_require_param(article_id)
+        check_require_param(article_id)
         # 如果文章存在，则删除
         article: Article = Article.objects.get(pk=article_id)
         article.delete()
         return JsonResponse({'ret': 0, 'msg': '删除成功'})
 
-    def check_require_param(self, *args):
-        params_is_ok: bool = all(args)
-        if params_is_ok:
-            return True
-        else:
-            raise ValueError("缺少必要参数")
+
+class ArticleListView(View):
+
+    def get(self, request: HttpRequest):
+        """
+        查询文章列表
+        """
+        number: int = request.GET.get('number', 1)
+        per_page: int = request.GET.get('per_page', 10)
+        article_list: QuerySet = Article.objects.values('id', 'title').all()
+        # 获取总条数
+        total: int = article_list.count()
+        # 计算分页切片索引
+        top: int = (number - 1) * per_page
+        bottom: int = top + per_page
+        lists: List = list(article_list[top:bottom])
+        return JsonResponse({
+            'ret': 0, 'msg': 'ok',
+            'data': {
+                'total': total,
+                'number': number,
+                'per_page': per_page,
+                'lists': lists
+            }
+        })

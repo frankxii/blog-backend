@@ -87,13 +87,13 @@ class ArticleView(View):
         article_id: int = params.get("id")
         check_require_param(id=article_id)
         # 获取文章
-        article: dict = Article.objects.get(pk=article_id)
+        article: Article = Article.objects.get(pk=article_id)
         return JsonResponse({
             'ret': 0,
             'msg': 'ok',
             'data': {
-                'title': article.get('title'),
-                'body': article.get('body')
+                'title': article.title,
+                'body': article.body
             }
         })
 
@@ -191,8 +191,8 @@ class CategoryView(View):
 
     @error_handler('category')
     def post(self, request: HttpRequest):
-        form_data: QueryDict = request.POST
-        name: str = form_data.get('name')
+        params: dict = json.loads(request.body)
+        name: str = params.get('name')
         check_require_param(name=name)
         is_category_exist: bool = Category.objects.filter(name=name).exists()
         if is_category_exist:
@@ -207,6 +207,7 @@ class CategoryView(View):
         params: dict = json.loads(request.body)
         category_id: int = params.get('id')
         name: str = params.get('name')
+        check_require_param(id=category_id, name=name)
         category: Category = Category.objects.get(pk=category_id)
         # 有除本条记录外重名的存在，就返回response
         is_category_exist: bool = Category.objects.exclude(pk=category_id).filter(name=name).exists()

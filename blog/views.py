@@ -103,13 +103,16 @@ class ArticleView(View):
         新增文章
         """
         # 获取参数并校验
-        form_date: QueryDict = request.POST
-        title: str = form_date.get('title')
-        body: str = form_date.get('body')
+        params = json.loads(request.body)
+        title: str = params.get('title')
+        body: str = params.get('body')
+        category_id = params.get('category_id', 1)
+        print(body, title)
         check_require_param(title=title, body=body)
+        category = Category(pk=category_id)
         # 创建文章
-        Article.objects.create(title=title, body=body)
-        return JsonResponse({'ret': 0, 'msg': 'ok'})
+        article: Article = Article.objects.create(title=title, body=body, category=category)
+        return JsonResponse({'ret': 0, 'msg': '新建成功', 'data': {'id': article.id}})
 
     @error_handler('article')
     def put(self, request: HttpRequest):

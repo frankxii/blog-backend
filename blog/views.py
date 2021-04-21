@@ -109,6 +109,7 @@ class ArticleView(View):
         category_id = params.get('category_id', 1)
         print(body, title)
         check_require_param(title=title, body=body)
+
         category = Category(pk=category_id)
         # 创建文章
         article: Article = Article.objects.create(title=title, body=body, category=category)
@@ -154,21 +155,23 @@ class ArticleListView(View):
         查询文章列表
         """
         params: QueryDict = request.GET
-        number: int = params.get('number', 1)
-        per_page: int = params.get('per_page', 10)
+        current: int = int(params.get('current', 1))
+        page_size: int = int(params.get('page_size', 5))
+        print(current, page_size)
+        print(type(current), type(page_size))
         article_list: QuerySet = Article.objects.values('id', 'title').all()
         # 获取总条数
         total: int = article_list.count()
         # 计算分页切片索引
-        top: int = (number - 1) * per_page
-        bottom: int = top + per_page
+        top: int = (current - 1) * page_size
+        bottom: int = top + page_size
         lists: list = list(article_list[top:bottom])
         return JsonResponse({
             'ret': 0, 'msg': 'ok',
             'data': {
                 'total': total,
-                'number': number,
-                'per_page': per_page,
+                'current': current,
+                'page_size': page_size,
                 'lists': lists
             }
         })

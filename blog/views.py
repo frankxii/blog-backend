@@ -95,7 +95,9 @@ class ArticleView(View):
             'msg': 'ok',
             'data': {
                 'title': article.title,
-                'body': article.body
+                'body': article.body,
+                'category_id': article.category_id,
+                'category_name': article.category.name
             }
         })
 
@@ -108,7 +110,7 @@ class ArticleView(View):
         params = json.loads(request.body)
         title: str = params.get('title')
         body: str = params.get('body')
-        category_id = params.get('category_id', 1)
+        category_id = params.get('category_id', 0)
         check_require_param(title=title, body=body)
         # 分类存在时取对应分类，不存在则使用未分类。!!如果分类里不存在未分类，则可能抛出异常
         category: QuerySet = Category.objects.filter(pk=category_id)
@@ -130,11 +132,13 @@ class ArticleView(View):
         article_id: int = params.get('id')
         title: str = params.get('title')
         body: str = params.get('body')
-        check_require_param(id=article_id, title=title, body=body)
+        category_id: int = params.get('category_id')
+        check_require_param(id=article_id, title=title, body=body, category=category_id)
         # 获取文章并修改
         article: Article = Article.objects.get(pk=article_id)
         article.title = title
         article.body = body
+        article.category_id = category_id
         article.save()
         return JsonResponse({'ret': 0, 'msg': '修改成功'})
 

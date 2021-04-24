@@ -8,11 +8,13 @@ from django.http import JsonResponse
 from django.views import View
 from blog.models import Article, Category
 from django.db import models
+from django.db.models import F
 
 if TYPE_CHECKING:
     from django.http.request import HttpRequest
     from django.db.models import QuerySet
     from django.http.request import QueryDict
+    from datetime import datetime
 
     ViewMethod = TypeVar('ViewMethod', bound=Callable[[HttpRequest], JsonResponse])
     Decorator = TypeVar('Decorator', bound=Callable[[Callable[[HttpRequest], JsonResponse]], JsonResponse])
@@ -107,10 +109,13 @@ class ArticleView(View):
         title: str = params.get('title')
         body: str = params.get('body')
         category_id = params.get('category_id', 1)
-        print(body, title)
         check_require_param(title=title, body=body)
-
-        category = Category(pk=category_id)
+        # 分类存在时取对应分类，不存在则使用未分类。!!如果分类里不存在未分类，则可能抛出异常
+        category: QuerySet = Category.objects.filter(pk=category_id)
+        if category.exists():
+            category = category.get()
+        else:
+            category = Category.objects.filter(name='未分类').get()
         # 创建文章
         article: Article = Article.objects.create(title=title, body=body, category=category)
         return JsonResponse({'ret': 0, 'msg': '新建成功', 'data': {'id': article.id}})
@@ -157,15 +162,21 @@ class ArticleListView(View):
         params: QueryDict = request.GET
         current: int = int(params.get('current', 1))
         page_size: int = int(params.get('page_size', 5))
-        print(current, page_size)
-        print(type(current), type(page_size))
-        article_list: QuerySet = Article.objects.values('id', 'title').all()
+        article_list: QuerySet = Article.objects.annotate(category_name=F('category__name')).values(
+            'id', 'title', 'category_name', 'create_time', 'update_time'
+        ).all()
         # 获取总条数
         total: int = article_list.count()
         # 计算分页切片索引
         top: int = (current - 1) * page_size
         bottom: int = top + page_size
         lists: list = list(article_list[top:bottom])
+        # 序列化model
+        for item in lists:
+            create_time: datetime = item.get('create_time')
+            update_time: datetime = item.get('update_time')
+            item['create_time'] = str(create_time.replace(microsecond=0))
+            item['update_time'] = str(update_time.replace(microsecond=0))
         return JsonResponse({
             'ret': 0, 'msg': 'ok',
             'data': {

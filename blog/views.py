@@ -166,9 +166,16 @@ class ArticleListView(View):
         params: QueryDict = request.GET
         current: int = int(params.get('current', 1))
         page_size: int = int(params.get('page_size', 5))
+        # 获取全部文章
         article_list: QuerySet = Article.objects.annotate(category_name=F('category__name')).values(
             'id', 'title', 'category_name', 'create_time', 'update_time'
         ).all()
+
+        # 如果有传filter字段，字段为category时使用分类过滤
+        list_filter = params.get('filter', '')
+        if list_filter == 'category':
+            category_name = params.get('category_name')
+            article_list: QuerySet = article_list.filter(category_name=category_name)
         # 获取总条数
         total: int = article_list.count()
         # 计算分页切片索引

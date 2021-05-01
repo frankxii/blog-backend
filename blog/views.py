@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.views import View
 from blog.models import Article, Category
 from django.db import models
-from django.db.models import F
+from django.db.models import F, Count
 
 if TYPE_CHECKING:
     from django.http.request import HttpRequest
@@ -256,3 +256,15 @@ class CategoryListView(View):
             'msg': 'ok',
             'data': list(categories)
         })
+
+
+class ArchiveView(View):
+    def get(self, request: HttpRequest):
+        params: QueryDict = request.GET
+        cate = params.get('cate', 'category')
+        if cate == 'category':
+            archive: QuerySet = Article.objects.annotate(
+                name=F('category__name'),
+                count=Count('category_id')
+            ).values('name', 'count')
+            return JsonResponse({'ret': 0, 'msg': 'ok', 'data': list(archive)})

@@ -6,9 +6,11 @@ import functools
 
 from django.http import JsonResponse
 from django.views import View
-from blog.models import Article, Category
+from blog.models import Article, Category, Tag
 from django.db import models
 from django.db.models import F, Count
+
+from blog.tool import handle_not_exist_tags
 
 if TYPE_CHECKING:
     from django.http.request import HttpRequest
@@ -97,7 +99,8 @@ class ArticleView(View):
                 'title': article.title,
                 'body': article.body,
                 'category_id': article.category_id,
-                'category_name': article.category.name
+                'category_name': article.category.name,
+                'tags': article.tags
             }
         })
 
@@ -111,15 +114,23 @@ class ArticleView(View):
         title: str = params.get('title')
         body: str = params.get('body')
         category_id = params.get('category_id', 0)
+        tags: list[int, str] = params.get('tags', [])
         check_require_param(title=title, body=body)
+
         # 分类存在时取对应分类，不存在则使用未分类。!!如果分类里不存在未分类，则可能抛出异常
         category: QuerySet = Category.objects.filter(pk=category_id)
         if category.exists():
             category = category.get()
         else:
             category = Category.objects.filter(name='未分类').get()
+
+        print(tags)
+        # 处理未创建的标签
+        handle_not_exist_tags(tags)
+        print(tags)
+
         # 创建文章
-        article: Article = Article.objects.create(title=title, body=body, category=category)
+        article: Article = Article.objects.create(title=title, body=body, category=category, tags=tags)
         return JsonResponse({'ret': 0, 'msg': '新建成功', 'data': {'id': article.id}})
 
     @error_handler('article')
@@ -133,12 +144,16 @@ class ArticleView(View):
         title: str = params.get('title')
         body: str = params.get('body')
         category_id: int = params.get('category_id')
+        tags: list[int, str] = params.get('tags', [])
         check_require_param(id=article_id, title=title, body=body, category=category_id)
+        # 处理未创建的标签
+        handle_not_exist_tags(tags)
         # 获取文章并修改
         article: Article = Article.objects.get(pk=article_id)
         article.title = title
         article.body = body
         article.category_id = category_id
+        article.tags = tags
         article.save()
         return JsonResponse({'ret': 0, 'msg': '修改成功'})
 
@@ -168,7 +183,7 @@ class ArticleListView(View):
         page_size: int = int(params.get('page_size', 5))
         # 获取全部文章
         article_list: QuerySet = Article.objects.annotate(category_name=F('category__name')).values(
-            'id', 'title', 'category_name', 'create_time', 'update_time'
+            'id', 'title', 'category_name', 'tags', 'create_time', 'update_time'
         ).all()
 
         # 如果有传filter字段，字段为category时使用分类过滤
@@ -176,12 +191,13 @@ class ArticleListView(View):
         if list_filter == 'category':
             category_name = params.get('category_name')
             article_list: QuerySet = article_list.filter(category_name=category_name)
+        article_list = article_list.order_by('-update_time')
         # 获取总条数
         total: int = article_list.count()
         # 计算分页切片索引
         top: int = (current - 1) * page_size
         bottom: int = top + page_size
-        lists: list = list(article_list[top:bottom])
+        lists: list[dict] = list(article_list[top:bottom])
         # 序列化model
         for item in lists:
             create_time: datetime = item.get('create_time')
@@ -270,8 +286,20 @@ class ArchiveView(View):
         params: QueryDict = request.GET
         cate = params.get('cate', 'category')
         if cate == 'category':
-            archive: QuerySet = Article.objects.annotate(
+            archive: QuerySet = Article.objects.values('category__name').annotate(
                 name=F('category__name'),
-                count=Count('category_id')
+                count=Count('category')
             ).values('name', 'count')
             return JsonResponse({'ret': 0, 'msg': 'ok', 'data': list(archive)})
+
+
+class TagMapView(View):
+
+    def get(self, request: HttpRequest):
+        tags = Tag.objects.all()
+        tags_dict = {tag.id: tag.name for tag in tags}
+        return JsonResponse({
+            'ret': 0,
+            'msg': 'ok',
+            'data': tags_dict
+        })

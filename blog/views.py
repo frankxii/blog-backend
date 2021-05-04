@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+from collections import Counter
 from typing import TYPE_CHECKING, Callable, TypeVar
 
 import json
@@ -291,6 +293,24 @@ class ArchiveView(View):
                 count=Count('category')
             ).values('name', 'count')
             return JsonResponse({'ret': 0, 'msg': 'ok', 'data': list(archive)})
+        elif cate == 'tag':
+            # 取出所有文章用到的标签
+            # <QuerySet [{'tags': [4, 6]}, {'tags': [7, 5]}, {'tags': [4]}, {'tags': [5, 4]}]>
+            articles: QuerySet = Article.objects.values('tags').exclude(tags=[]).all()
+            # 整合到列表里
+            tag_count_list: list[int] = []
+            for article in articles:
+                tag_count_list += article['tags']
+            # 计算每个标签用到的次数
+            counter: Counter = Counter(tag_count_list)
+            # 把标签id替换成标签名
+            tags: QuerySet = Tag.objects.all()
+            tags_dict: dict[int, str] = {tag.id: tag.name for tag in tags}
+            # [["测试标签", 3], ["分类", 1], ["编程", 1], ["随笔", 2]]
+            tag_set_list: list[list[str, int]] = []
+            for tag_id, tag_count in counter.items():
+                tag_set_list.append([tags_dict[tag_id], tag_count])
+            return JsonResponse({'ret': 0, 'msg': 'ok', 'data': tag_set_list})
 
 
 class TagMapView(View):

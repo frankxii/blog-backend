@@ -188,11 +188,15 @@ class ArticleListView(View):
             'id', 'title', 'category_name', 'tags', 'create_time', 'update_time'
         ).all()
 
-        # 如果有传filter字段，字段为category时使用分类过滤
+        # 如果有传filter字段，字段为category时使用分类过滤，字段为tag时用标签过滤
         list_filter = params.get('filter', '')
         if list_filter == 'category':
-            category_name = params.get('category_name')
+            category_name: str = params.get('category_name')
             article_list: QuerySet = article_list.filter(category_name=category_name)
+        elif list_filter == 'tag':
+            tag_name: str = params.get('tag_name')
+            tag = Tag.objects.filter(name=tag_name).get()
+            article_list: QuerySet = article_list.filter(tags__contains=tag.id)
         article_list = article_list.order_by('-update_time')
         # 获取总条数
         total: int = article_list.count()

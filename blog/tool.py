@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from blog.models import Tag
+from markdown2 import Markdown
+from django.utils.html import strip_tags
 
 
 def handle_not_exist_tags(tag_list: list[int, str]) -> None:
@@ -20,3 +22,11 @@ def handle_not_exist_tags(tag_list: list[int, str]) -> None:
             else:
                 tag_id = Tag.objects.create(name=tag).id
             tag_list[index] = tag_id
+
+
+def md_body_to_excerpt(md_body: str, length: int = 180) -> str:
+    md: Markdown = Markdown()
+    body_with_html_tag: str = md.convert(md_body)
+    excerpt: str = strip_tags(body_with_html_tag)
+    excerpt = excerpt.replace('\n', ' ')
+    return excerpt[:length]

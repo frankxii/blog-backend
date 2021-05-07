@@ -12,7 +12,7 @@ from blog.models import Article, Category, Tag
 from django.db import models
 from django.db.models import F, Count
 
-from blog.tool import handle_not_exist_tags
+from blog.tool import handle_not_exist_tags, md_body_to_excerpt
 
 if TYPE_CHECKING:
     from django.http.request import HttpRequest
@@ -126,13 +126,12 @@ class ArticleView(View):
         else:
             category = Category.objects.filter(name='未分类').get()
 
-        print(tags)
         # 处理未创建的标签
         handle_not_exist_tags(tags)
-        print(tags)
-
+        # 生成摘要
+        excerpt: str = md_body_to_excerpt(body)
         # 创建文章
-        article: Article = Article.objects.create(title=title, body=body, category=category, tags=tags)
+        article: Article = Article.objects.create(title=title, body=body, excerpt=excerpt, category=category, tags=tags)
         return JsonResponse({'ret': 0, 'msg': '新建成功', 'data': {'id': article.id}})
 
     @error_handler('article')
@@ -150,10 +149,13 @@ class ArticleView(View):
         check_require_param(id=article_id, title=title, body=body, category=category_id)
         # 处理未创建的标签
         handle_not_exist_tags(tags)
+        # 生成摘要
+        excerpt: str = md_body_to_excerpt(body)
         # 获取文章并修改
         article: Article = Article.objects.get(pk=article_id)
         article.title = title
         article.body = body
+        article.excerpt = excerpt
         article.category_id = category_id
         article.tags = tags
         article.save()
@@ -185,7 +187,7 @@ class ArticleListView(View):
         page_size: int = int(params.get('page_size', 5))
         # 获取全部文章
         article_list: QuerySet = Article.objects.annotate(category_name=F('category__name')).values(
-            'id', 'title', 'category_name', 'tags', 'create_time', 'update_time'
+            'id', 'title', 'excerpt', 'category_name', 'tags', 'create_time', 'update_time'
         ).all()
 
         # 如果有传filter字段，字段为category时使用分类过滤，字段为tag时用标签过滤

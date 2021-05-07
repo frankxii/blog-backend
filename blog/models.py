@@ -3,8 +3,9 @@ from django.db import models
 
 class Article(models.Model):
     """博客文章表"""
-    title = models.TextField('标题')
+    title = models.CharField(max_length=255, verbose_name='标题', default='')
     body = models.TextField('内容')
+    excerpt = models.CharField(max_length=255, verbose_name='摘要', default='')
     category = models.ForeignKey('Category', on_delete=models.CASCADE, db_constraint=False)
     # tags => [tag_id, tag_id, tag_id]
     tags = models.JSONField(default=list)

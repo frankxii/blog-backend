@@ -26,7 +26,7 @@ SECRET_KEY = ENV['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['www.frankxii.com', 'frankxii.com']
+ALLOWED_HOSTS = ['www.frankxii.com', 'frankxii.com', 'localhost']
 
 # Application definition
 

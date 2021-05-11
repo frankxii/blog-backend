@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import TYPE_CHECKING, Callable, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar, Optional
 
 import json
 import functools
@@ -183,26 +183,33 @@ class ArticleListView(View):
         查询文章列表
         """
         params: QueryDict = request.GET
-        current: int = int(params.get('current', 1))
-        page_size: int = int(params.get('page_size', 5))
         # 获取全部文章
         article_list: QuerySet = Article.objects.annotate(category_name=F('category__name')).values(
             'id', 'title', 'excerpt', 'category_name', 'tags', 'create_time', 'update_time'
         ).all()
 
-        # 如果有传filter字段，字段为category时使用分类过滤，字段为tag时用标签过滤
-        list_filter = params.get('filter', '')
-        if list_filter == 'category':
-            category_name: str = params.get('category_name')
-            article_list: QuerySet = article_list.filter(category_name=category_name)
-        elif list_filter == 'tag':
-            tag_name: str = params.get('tag_name')
-            tag = Tag.objects.filter(name=tag_name).get()
-            article_list: QuerySet = article_list.filter(tags__contains=tag.id)
+        filters_str: str = params.get('filters', '')
+        filters: dict = json.loads(filters_str) if filters_str else {}
+        category_filter: Optional[list] = filters.get('category_ids', [])
+        tag_filter: Optional[list] = filters.get('tag_ids', [])
+
+        if category_filter:
+            article_list = article_list.filter(category__in=category_filter)
+        if tag_filter:
+            article_list = article_list.filter(tags__contains=tag_filter)
+
         article_list = article_list.order_by('-update_time')
+
         # 获取总条数
         total: int = article_list.count()
         # 计算分页切片索引
+        pagination_str = params.get('pagination', '')
+        current: int = 1
+        page_size: int = 5
+        if pagination_str:
+            pagination: dict = json.loads(pagination_str)
+            current = pagination.get('current', current)
+            page_size = pagination.get('page_size', page_size)
         top: int = (current - 1) * page_size
         bottom: int = top + page_size
         lists: list[dict] = list(article_list[top:bottom])

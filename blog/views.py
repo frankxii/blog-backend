@@ -190,13 +190,24 @@ class ArticleListView(View):
 
         filters_str: str = params.get('filters', '')
         filters: dict = json.loads(filters_str) if filters_str else {}
-        category_filter: Optional[list] = filters.get('category_ids', [])
-        tag_filter: Optional[list] = filters.get('tag_ids', [])
+        # 后台分类id筛选
+        category_id_filter: Optional[list] = filters.get('category_ids', [])
+        # 后台标签id筛选
+        tag_id_filter: Optional[list] = filters.get('tag_ids', [])
+        # 前台分类name筛选
+        category_name_filter: Optional[str] = filters.get('category_name', '')
+        # 前台标签name筛选
+        tag_name_filter: Optional[str] = filters.get('tag_name', '')
 
-        if category_filter:
-            article_list = article_list.filter(category__in=category_filter)
-        if tag_filter:
-            article_list = article_list.filter(tags__contains=tag_filter)
+        if category_id_filter:
+            article_list = article_list.filter(category__in=category_id_filter)
+        if tag_id_filter:
+            article_list = article_list.filter(tags__contains=tag_id_filter)
+        if category_name_filter:
+            article_list = article_list.filter(category__name=category_name_filter)
+        if tag_name_filter:
+            tag = Tag.objects.filter(name=tag_name_filter).get()
+            article_list = article_list.filter(tags__contains=tag.id)
 
         article_list = article_list.order_by('-update_time')
 

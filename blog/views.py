@@ -12,7 +12,7 @@ from blog.models import Article, Category, Tag
 from django.db import models
 from django.db.models import F, Count
 
-from blog_backend import redis
+from blog import redis
 from blog.app import RedisKey
 from blog.tool import handle_not_exist_tags, md_body_to_excerpt
 

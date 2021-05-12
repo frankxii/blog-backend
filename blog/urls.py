@@ -1,11 +1,11 @@
 from django.urls import path
-from blog import views
+from blog.views import article_views
 
 urlpatterns = [
-    path('article', views.ArticleView.as_view()),
-    path('articleList', views.ArticleListView.as_view()),
-    path('category', views.CategoryView.as_view()),
-    path('categoryList', views.CategoryListView.as_view()),
-    path('tagMap', views.TagMapView.as_view()),
-    path('archive', views.ArchiveView.as_view()),
+    path('article', article_views.ArticleView.as_view()),
+    path('articleList', article_views.ArticleListView.as_view()),
+    path('category', article_views.CategoryView.as_view()),
+    path('categoryList', article_views.CategoryListView.as_view()),
+    path('tagMap', article_views.TagMapView.as_view()),
+    path('archive', article_views.ArchiveView.as_view()),
 ]

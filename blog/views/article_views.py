@@ -40,7 +40,7 @@ def error_handler(view_name: str) -> Decorator:
     Returns:异常处理装饰器
     """
 
-    def decorator(func: ViewMethod, *args, **kwargs) -> Callable:
+    def decorator(func: ViewMethod) -> Callable:
         """
         视图异常处理装饰器
         """

@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class Article(models.Model):
@@ -21,4 +22,26 @@ class Category(models.Model):
 
 
 class Tag(models.Model):
+    """标签"""
     name = models.TextField('标签名称')
+
+
+class Group(models.Model):
+    """权限组"""
+    name = models.CharField('组名', max_length=15)
+
+
+class Permission(models.Model):
+    """权限"""
+    name = models.CharField('权限名', max_length=31)
+    group = models.ManyToManyField(Group, db_constraint=False)
+
+
+class User(models.Model):
+    """用户"""
+    username = models.CharField('用户名', max_length=15)
+    password = models.CharField('密码', max_length=128)
+    is_active = models.BooleanField('激活', default=True)
+    last_login = models.DateTimeField('上次登录时间', default=timezone.now)
+    create_time = models.DateTimeField('创建时间', default=timezone.now)
+    group = models.ManyToManyField(Group, db_constraint=False)

@@ -2,3 +2,4 @@ Django~=3.2
 mysqlclient~=2.0.3
 django-cors-headers~=3.7.0
 markdown2~=2.4.0
+redis~=3.5.3

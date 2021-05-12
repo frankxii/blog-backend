@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from collections import Counter
 from typing import TYPE_CHECKING, Callable, TypeVar, Optional
 
 import json
 import functools
+from collections import Counter
 
 from django.http import JsonResponse
 from django.views import View
@@ -12,6 +12,8 @@ from blog.models import Article, Category, Tag
 from django.db import models
 from django.db.models import F, Count
 
+from blog_backend import redis
+from blog.app import RedisKey
 from blog.tool import handle_not_exist_tags, md_body_to_excerpt
 
 if TYPE_CHECKING:
@@ -94,7 +96,8 @@ class ArticleView(View):
         check_require_param(id=article_id)
         # 获取文章
         article: Article = Article.objects.get(pk=article_id)
-        return JsonResponse({
+
+        response = {
             'ret': 0,
             'msg': 'ok',
             'data': {
@@ -104,7 +107,13 @@ class ArticleView(View):
                 'category_name': article.category.name,
                 'tags': article.tags
             }
-        })
+        }
+        # 如果前台访问，访问数加1，并返回访问统计数据
+        ref = params.get('_ref', '')
+        if ref == 'front':
+            visit = redis.hincrby(RedisKey.BLOG_ARTICLE_VISIT, article_id)
+            response['data']['visit'] = visit
+        return JsonResponse(response)
 
     @error_handler('article')
     def post(self, request: HttpRequest):
@@ -173,6 +182,8 @@ class ArticleView(View):
         # 如果文章存在，则删除
         article: Article = Article.objects.get(pk=article_id)
         article.delete()
+        # 清理redis访问统计
+        redis.hdel(RedisKey.BLOG_ARTICLE_VISIT, article_id)
         return JsonResponse({'ret': 0, 'msg': '删除成功'})
 
 
@@ -224,12 +235,22 @@ class ArticleListView(View):
         top: int = (current - 1) * page_size
         bottom: int = top + page_size
         lists: list[dict] = list(article_list[top:bottom])
-        # 序列化model
+        article_ids: list = []
+        # 格式化日期
         for item in lists:
             create_time: datetime = item.get('create_time')
             update_time: datetime = item.get('update_time')
             item['create_time'] = str(create_time.replace(microsecond=0))
             item['update_time'] = str(update_time.replace(microsecond=0))
+            article_ids.append(item.get('id'))
+        # 从redis取文章访问统计
+        visit_counts = redis.hmget(RedisKey.BLOG_ARTICLE_VISIT, article_ids)
+        for index, count in enumerate(visit_counts):
+            if count is None:
+                count = 0
+            else:
+                count = int(count)
+            lists[index]['visit'] = count
         return JsonResponse({
             'ret': 0, 'msg': 'ok',
             'data': {

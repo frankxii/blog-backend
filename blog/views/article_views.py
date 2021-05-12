@@ -14,7 +14,7 @@ from django.db.models import F, Count
 
 from blog import redis
 from blog.app import RedisKey
-from blog.tool import handle_not_exist_tags, md_body_to_excerpt
+from blog import tool
 
 if TYPE_CHECKING:
     from django.http.request import HttpRequest
@@ -24,12 +24,6 @@ if TYPE_CHECKING:
 
     ViewMethod = TypeVar('ViewMethod', bound=Callable[[HttpRequest], JsonResponse])
     Decorator = TypeVar('Decorator', bound=Callable[[Callable[[HttpRequest], JsonResponse]], JsonResponse])
-
-
-def check_require_param(**kwargs):
-    for key, value in kwargs.items():
-        if not value:
-            raise ValueError('{0}不能为空'.format(key))
 
 
 def error_handler(view_name: str) -> Decorator:
@@ -93,7 +87,7 @@ class ArticleView(View):
         # 参数获取与校验
         params: QueryDict = request.GET
         article_id: int = params.get("id")
-        check_require_param(id=article_id)
+        tool.check_require_param(id=article_id)
         # 获取文章
         article: Article = Article.objects.get(pk=article_id)
 
@@ -126,7 +120,7 @@ class ArticleView(View):
         body: str = params.get('body')
         category_id = params.get('category_id', 0)
         tags: list[int, str] = params.get('tags', [])
-        check_require_param(title=title, body=body)
+        tool.check_require_param(title=title, body=body)
 
         # 分类存在时取对应分类，不存在则使用未分类。!!如果分类里不存在未分类，则可能抛出异常
         category: QuerySet = Category.objects.filter(pk=category_id)
@@ -136,9 +130,9 @@ class ArticleView(View):
             category = Category.objects.filter(name='未分类').get()
 
         # 处理未创建的标签
-        handle_not_exist_tags(tags)
+        tool.handle_not_exist_tags(tags)
         # 生成摘要
-        excerpt: str = md_body_to_excerpt(body)
+        excerpt: str = tool.md_body_to_excerpt(body)
         # 创建文章
         article: Article = Article.objects.create(title=title, body=body, excerpt=excerpt, category=category, tags=tags)
         return JsonResponse({'ret': 0, 'msg': '新建成功', 'data': {'id': article.id}})
@@ -155,11 +149,11 @@ class ArticleView(View):
         body: str = params.get('body')
         category_id: int = params.get('category_id')
         tags: list[int, str] = params.get('tags', [])
-        check_require_param(id=article_id, title=title, body=body, category=category_id)
+        tool.check_require_param(id=article_id, title=title, body=body, category=category_id)
         # 处理未创建的标签
-        handle_not_exist_tags(tags)
+        tool.handle_not_exist_tags(tags)
         # 生成摘要
-        excerpt: str = md_body_to_excerpt(body)
+        excerpt: str = tool.md_body_to_excerpt(body)
         # 获取文章并修改
         article: Article = Article.objects.get(pk=article_id)
         article.title = title
@@ -178,7 +172,7 @@ class ArticleView(View):
         # 获取id并校验
         params: QueryDict = json.loads(request.body)
         article_id: int = params.get('id')
-        check_require_param(id=article_id)
+        tool.check_require_param(id=article_id)
         # 如果文章存在，则删除
         article: Article = Article.objects.get(pk=article_id)
         article.delete()
@@ -269,7 +263,7 @@ class CategoryView(View):
     def get(self, request: HttpRequest):
         params: QueryDict = request.GET
         category_id: int = params.get('id')
-        check_require_param(id=category_id)
+        tool.check_require_param(id=category_id)
         category: Category = Category.objects.get(pk=category_id)
         return JsonResponse({
             'ret': 0,
@@ -284,7 +278,7 @@ class CategoryView(View):
     def post(self, request: HttpRequest):
         params: dict = json.loads(request.body)
         name: str = params.get('name')
-        check_require_param(name=name)
+        tool.check_require_param(name=name)
         is_category_exist: bool = Category.objects.filter(name=name).exists()
         if is_category_exist:
             return JsonResponse({
@@ -298,7 +292,7 @@ class CategoryView(View):
         params: dict = json.loads(request.body)
         category_id: int = params.get('id')
         name: str = params.get('name')
-        check_require_param(id=category_id, name=name)
+        tool.check_require_param(id=category_id, name=name)
         category: Category = Category.objects.get(pk=category_id)
         # 有除本条记录外重名的存在，就返回response
         is_category_exist: bool = Category.objects.exclude(pk=category_id).filter(name=name).exists()

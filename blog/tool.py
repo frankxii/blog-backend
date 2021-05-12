@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+
 from blog.models import Tag
 from markdown2 import Markdown
 from django.utils.html import strip_tags
@@ -30,3 +32,18 @@ def md_body_to_excerpt(md_body: str, length: int = 180) -> str:
     excerpt: str = strip_tags(body_with_html_tag)
     excerpt = excerpt.replace('\n', ' ')
     return excerpt[:length]
+
+
+def check_require_param(**kwargs):
+    for key, value in kwargs.items():
+        if not value:
+            raise ValueError('{0}不能为空'.format(key))
+
+
+def password_to_md5(password: str):
+    m = hashlib.md5()
+    password_encoded: bytes = password.encode(encoding='utf-8')
+    m.update(password_encoded)
+    # 32个字符，128位
+    password_md5: str = m.hexdigest()
+    return password_md5

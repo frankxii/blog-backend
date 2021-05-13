@@ -7,7 +7,7 @@ from django.views import View
 from django.http import JsonResponse
 
 from blog import tool
-from blog.models import User
+from blog.models import User, Group
 from .article_views import error_handler
 
 if TYPE_CHECKING:
@@ -74,13 +74,55 @@ class GroupView(View):
         pass
 
     def post(self, request: HttpRequest):
-        pass
+        params: dict = json.loads(request.body)
+        name: str = params.get('name')
+        tool.check_require_param(name=name)
+        if Group.objects.filter(name=name).exists:
+            return JsonResponse({
+                'ret': 10010,
+                'msg': '组名已存在'
+            })
+        Group.objects.create(name=name)
+        return JsonResponse({
+            'ret': 0,
+            'msg': "ok"
+        })
 
     def put(self, request: HttpRequest):
-        pass
+        params: dict = json.loads(request.body)
+        group_id: int = params.get('group_id')
+        group_name: str = params.get('name')
+        tool.check_require_param(id=group_id, name=group_name)
+        group = Group.objects.filter(id=group_id)
+        if not group.exists():
+            return JsonResponse({
+                'ret': 10020,
+                'msg': '权限组不存在'
+            })
+        else:
+            group.name = group_name
+            group.save()
+            return JsonResponse({
+                'ret': 0,
+                'msg': '修改成功'
+            })
 
     def delete(self, request: HttpRequest):
-        pass
+        params: dict = json.loads(request.body)
+        group_id: int = params.get('group_id')
+        tool.check_require_param(id=group_id)
+        group = Group.objects.filter(id=group_id)
+        if not group.exists():
+            return JsonResponse({
+                'ret': 10020,
+                'msg': '权限组不存在'
+            })
+        else:
+            group.delete()
+            return JsonResponse({
+                'ret': 0,
+                'msg': '删除成功'
+            })
 
 
 class PermissionView(View):

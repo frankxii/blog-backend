@@ -115,7 +115,7 @@ class ArticleView(View):
         新增文章
         """
         # 获取参数并校验
-        params = json.loads(request.body)
+        params: dict = json.loads(request.body)
         title: str = params.get('title')
         body: str = params.get('body')
         category_id = params.get('category_id', 0)
@@ -143,7 +143,7 @@ class ArticleView(View):
         修改文章
         """
         # 获取参数并校验
-        params: QueryDict = json.loads(request.body)
+        params: dict = json.loads(request.body)
         article_id: int = params.get('id')
         title: str = params.get('title')
         body: str = params.get('body')
@@ -170,7 +170,7 @@ class ArticleView(View):
         删除文章
         """
         # 获取id并校验
-        params: QueryDict = json.loads(request.body)
+        params: dict = json.loads(request.body)
         article_id: int = params.get('id')
         tool.check_require_param(id=article_id)
         # 如果文章存在，则删除

@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from django.http.request import HttpRequest
     from django.db.models import QuerySet
     from django.http.request import QueryDict
-    from datetime import datetime
 
     ViewMethod = TypeVar('ViewMethod', bound=Callable[[HttpRequest], JsonResponse])
     Decorator = TypeVar('Decorator', bound=Callable[[Callable[[HttpRequest], JsonResponse]], JsonResponse])
@@ -228,30 +227,30 @@ class ArticleListView(View):
             page_size = pagination.get('page_size', page_size)
         top: int = (current - 1) * page_size
         bottom: int = top + page_size
-        lists: list[dict] = list(article_list[top:bottom])
-        article_ids: list = []
+        records: list[dict] = list(article_list[top:bottom])
+
         # 格式化日期
-        for item in lists:
-            create_time: datetime = item.get('create_time')
-            update_time: datetime = item.get('update_time')
-            item['create_time'] = str(create_time.replace(microsecond=0))
-            item['update_time'] = str(update_time.replace(microsecond=0))
-            article_ids.append(item.get('id'))
+        tool.format_datetime_to_str(records, 'create_time', 'update_time')
+
         # 从redis取文章访问统计
+        article_ids: list = []
+        for record in records:
+            article_ids.append(record['id'])
         visit_counts = redis.hmget(RedisKey.BLOG_ARTICLE_VISIT, article_ids)
         for index, count in enumerate(visit_counts):
             if count is None:
                 count = 0
             else:
                 count = int(count)
-            lists[index]['visit'] = count
+            records[index]['visit'] = count
+
         return JsonResponse({
             'ret': 0, 'msg': 'ok',
             'data': {
                 'total': total,
                 'current': current,
                 'page_size': page_size,
-                'lists': lists
+                'lists': records
             }
         })
 

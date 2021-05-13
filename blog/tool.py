@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import hashlib
+from typing import TYPE_CHECKING
 
 from blog.models import Tag
 from markdown2 import Markdown
 from django.utils.html import strip_tags
+
+if TYPE_CHECKING:
+    from django.db.models import QuerySet
+    from datetime import datetime
 
 
 def handle_not_exist_tags(tag_list: list[int, str]) -> None:
@@ -27,6 +32,7 @@ def handle_not_exist_tags(tag_list: list[int, str]) -> None:
 
 
 def md_body_to_excerpt(md_body: str, length: int = 180) -> str:
+    """md源文本转成html后去除标签，再去掉换行，生成摘要"""
     md: Markdown = Markdown()
     body_with_html_tag: str = md.convert(md_body)
     excerpt: str = strip_tags(body_with_html_tag)
@@ -47,3 +53,11 @@ def password_to_md5(password: str):
     # 32个字符，128位
     password_md5: str = m.hexdigest()
     return password_md5
+
+
+def format_datetime_to_str(records: QuerySet, *fields):
+    """去掉时间字段的毫秒数并转为str"""
+    for record in records:
+        for field in fields:
+            time_field: datetime = record.get(field)
+            record[field] = str(time_field.replace(microsecond=0))

@@ -12,6 +12,7 @@ from .article_views import error_handler
 
 if TYPE_CHECKING:
     from django.http import HttpRequest, QueryDict
+    from django.db.models import QuerySet
 
 
 class UserView(View):
@@ -66,6 +67,17 @@ class UserView(View):
         return JsonResponse({
             'ret': 0,
             'msg': '删除成功'
+        })
+
+
+class UserListView(View):
+    def get(self, request: HttpRequest):
+        user_lists: QuerySet = User.objects.values('id', 'username', 'last_login', 'create_time', 'is_active')
+        tool.format_datetime_to_str(user_lists, 'create_time', 'last_login')
+        return JsonResponse({
+            'ret': 0,
+            'msg': 'ok',
+            'data': list(user_lists)
         })
 
 

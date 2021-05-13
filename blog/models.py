@@ -28,7 +28,7 @@ class Tag(models.Model):
 
 class Group(models.Model):
     """权限组"""
-    name = models.CharField('组名', max_length=15)
+    name = models.CharField('组名', max_length=15, unique=True)
 
 
 class Permission(models.Model):
@@ -39,7 +39,7 @@ class Permission(models.Model):
 
 class User(models.Model):
     """用户"""
-    username = models.CharField('用户名', max_length=15)
+    username = models.CharField('用户名', max_length=15, unique=True)
     password = models.CharField('密码', max_length=128)
     is_active = models.BooleanField('激活', default=True)
     last_login = models.DateTimeField('上次登录时间', default=timezone.now)

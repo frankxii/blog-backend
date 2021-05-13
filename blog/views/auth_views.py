@@ -59,10 +59,9 @@ class UserView(View):
 
     def delete(self, request: HttpRequest):
         params: dict = json.loads(request.body)
-        username: str = str(params.get('username'))
-        # 用户不存在时会抛出DoesNotExist
-        user: User = User.objects.get(username=username)
-        print(type(user))
+        user_id: int = params.get('id')
+        tool.check_require_param(id=user_id)
+        user: User = User.objects.get(id=user_id)
         user.delete()
         return JsonResponse({
             'ret': 0,
@@ -89,7 +88,7 @@ class GroupView(View):
         params: dict = json.loads(request.body)
         name: str = params.get('name')
         tool.check_require_param(name=name)
-        if Group.objects.filter(name=name).exists:
+        if Group.objects.filter(name=name).exists():
             return JsonResponse({
                 'ret': 10010,
                 'msg': '组名已存在'
@@ -97,7 +96,7 @@ class GroupView(View):
         Group.objects.create(name=name)
         return JsonResponse({
             'ret': 0,
-            'msg': "ok"
+            'msg': "新建成功"
         })
 
     def put(self, request: HttpRequest):
@@ -121,7 +120,7 @@ class GroupView(View):
 
     def delete(self, request: HttpRequest):
         params: dict = json.loads(request.body)
-        group_id: int = params.get('group_id')
+        group_id: int = params.get('id')
         tool.check_require_param(id=group_id)
         group = Group.objects.filter(id=group_id)
         if not group.exists():
@@ -135,6 +134,16 @@ class GroupView(View):
                 'ret': 0,
                 'msg': '删除成功'
             })
+
+
+class GroupListView(View):
+    def get(self, request: HttpRequest):
+        records = Group.objects.values('id', 'name')
+        return JsonResponse({
+            'ret': 0,
+            'msg': 'ok',
+            'data': list(records)
+        })
 
 
 class PermissionView(View):

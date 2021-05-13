@@ -13,5 +13,6 @@ urlpatterns = [
     path('user', auth_views.UserView.as_view()),
     path('userList', auth_views.UserListView.as_view()),
     path('group', auth_views.GroupView.as_view()),
+    path('groupList', auth_views.GroupListView.as_view()),
     path('permission', auth_views.PermissionView.as_view())
 ]

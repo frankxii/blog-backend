@@ -80,6 +80,18 @@ class UserListView(View):
         })
 
 
+class UserSearchListView(View):
+    def get(self, request: HttpRequest):
+        param: QueryDict = request.GET
+        fuzzy_name: str = str(param.get('fuzzy_name'))
+        users: QuerySet[dict] = User.objects.filter(username__icontains=fuzzy_name).values('id', 'username')
+        return JsonResponse({
+            'ret': 0,
+            'msg': 'ok',
+            'data': list(users)
+        })
+
+
 class GroupView(View):
     def get(self, request: HttpRequest):
         pass
@@ -143,6 +155,44 @@ class GroupListView(View):
             'ret': 0,
             'msg': 'ok',
             'data': list(records)
+        })
+
+
+class GroupMembersView(View):
+
+    def get(self, request: HttpRequest):
+        params: QueryDict = request.GET
+        group_id: int = params.get('group')
+        tool.check_require_param(id=group_id)
+        members: QuerySet = Group.objects.get(id=group_id).user_set.all()
+        members = members.values('id', 'username')
+        return JsonResponse({
+            'ret': 0,
+            'msg': 'ok',
+            'data': list(members)
+        })
+
+    def put(self, request: HttpRequest):
+        params: dict = json.loads(request.body)
+        group_id: int = params.get('group')
+        old_members: list[int] = params.get('old_members')
+        new_members: list[int] = params.get('new_members')
+        tool.check_require_param(group_id=group_id)
+
+        group = Group.objects.get(id=group_id)
+        # 获取当前权限组所有成员
+        members: QuerySet[User] = group.user_set.all()
+        member_ids: list[int] = [member.id for member in members]
+        # 对比所有成员和前端传的old members的差集，移除成员
+        members_remove: set[int] = set(member_ids).difference(old_members)
+        if members_remove:
+            group.user_set.remove(*members_remove)
+        # 新增new members
+        if new_members:
+            group.user_set.add(*new_members)
+        return JsonResponse({
+            'ret': 0,
+            'msg': '修改成功'
         })
 
 

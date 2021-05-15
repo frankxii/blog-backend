@@ -1,0 +1,107 @@
+[
+  {
+    "key": "system",
+    "title": "系统管理",
+    "children": [
+      {
+        "key": "system_user",
+        "title": "用户管理",
+        "link": "/system/user",
+        "children": [
+          {
+            "key": "system_user_add",
+            "title": "新增",
+            "children": []
+          },
+          {
+            "key": "system_user_freeze",
+            "title": "冻结",
+            "children": []
+          },
+          {
+            "key": "system_user_delete",
+            "title": "删除",
+            "children": []
+          }
+        ]
+      },
+      {
+        "key": "system_group",
+        "title": "权限管理",
+        "link": "/system/group",
+        "children": [
+          {
+            "key": "system_group_add",
+            "title": "新增",
+            "children": []
+          },
+          {
+            "key": "system_group_delete",
+            "title": "删除",
+            "children": []
+          },
+          {
+            "key": "system_group_member",
+            "title": "成员维护",
+            "children": []
+          },
+          {
+            "key": "system_group_setting",
+            "title": "权限设置",
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "key": "blog",
+    "title": "博客管理",
+    "children": [
+      {
+        "key": "blog_article",
+        "title": "文章管理",
+        "link": "/blog/article",
+        "children": [
+          {
+            "key": "blog_article_add",
+            "title": "新增",
+            "children": []
+          },
+          {
+            "key": "blog_article_edit",
+            "title": "编辑",
+            "children": []
+          },
+          {
+            "key": "blog_article_delete",
+            "title": "删除",
+            "children": []
+          }
+        ]
+      },
+      {
+        "key": "blog_category",
+        "title": "分类管理",
+        "link": "/blog/category",
+        "children": [
+          {
+            "key": "blog_category_add",
+            "title": "新增",
+            "children": []
+          },
+          {
+            "key": "blog_category_edit",
+            "title": "编辑",
+            "children": []
+          },
+          {
+            "key": "blog_category_delete",
+            "title": "删除",
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+]

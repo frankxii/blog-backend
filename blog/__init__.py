@@ -6,3 +6,6 @@ with open('blog_backend/env.json') as env:
     config: dict = env_dict['REDIS_INFO']
 
 redis = Redis(**config, decode_responses=True)
+
+with open('blog/Authority.json', 'rb') as authority_file:
+    authority_config: list[dict] = json.load(authority_file)

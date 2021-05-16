@@ -8,7 +8,7 @@ from django.views import View
 from django.http import JsonResponse
 
 from blog import tool
-from blog.models import User, Group
+from blog.models import User, Group, Permission
 from .article_views import error_handler
 from blog import authority_config
 
@@ -200,10 +200,62 @@ class GroupMembersView(View):
 
 class GroupPermissionView(View):
     def get(self, request: HttpRequest):
-        pass
+        params: QueryDict = request.GET
+        group_id: int = params.get('group')
+        tool.check_require_param(group_id=group_id)
+        # 查出权限组下所有权限对象
+        objs: QuerySet[dict] = Permission.objects.filter(group_id=group_id).values('name')
+        # 转权限对象集合为字符串列表
+        keys: list[str] = [obj['name'] for obj in objs]
+        return JsonResponse({
+            'ret': 0,
+            'msg': 'ok',
+            'data': keys
+        })
 
     def put(self, request: HttpRequest):
-        pass
+        params: dict = json.loads(request.body)
+        # 获取权限组信息
+        group_id: int = params.get('group')
+        tool.check_require_param(group_id=group_id)
+        group: Group = Group.objects.get(id=group_id)
+
+        # 获取勾选的keys
+        new_keys: list[str] = params.get('checked_keys', [])
+        # 获取数据库保存的keys
+        key_objs: QuerySet[dict] = group.permission_set.all().values('name')
+        old_keys: list[str] = [obj['name'] for obj in key_objs]
+
+        # 转列表为集合
+        new_keys_set: set[str] = set(new_keys)
+        old_keys_set: set[str] = set(old_keys)
+
+        # 利用差集找出需要增加和删除的keys
+        keys_need_add: set[str] = new_keys_set - old_keys_set
+        keys_need_delete: set[str] = old_keys_set - new_keys_set
+
+        # 更新db
+        if keys_need_add:
+            objs: list[Permission] = [Permission(name=key, group=group) for key in keys_need_add]
+            Permission.objects.bulk_create(objs)
+        if keys_need_delete:
+            objs: QuerySet = Permission.objects.filter(name__in=keys_need_delete, group=group)
+            objs.delete()
+
+        return JsonResponse({
+            'ret': 0,
+            'msg': '更新成功'
+        })
+
+
+class PermissionTree(View):
+    def get(self, request: HttpRequest):
+        """权限树所有数据，用于树控件数据展示"""
+        return JsonResponse({
+            'ret': 0,
+            'msg': 'ok',
+            'data': authority_config
+        })
 
 
 class Menu(View):

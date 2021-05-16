@@ -17,6 +17,7 @@ urlpatterns = [
     path('groupList', auth_views.GroupListView.as_view()),
     path('group/members', auth_views.GroupMembersView.as_view()),
     path('group/permission', auth_views.GroupPermissionView.as_view()),
+    path('permission/tree', auth_views.PermissionTree.as_view()),
     # 菜单
     path('menu', auth_views.Menu.as_view())
 ]

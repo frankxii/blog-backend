@@ -33,8 +33,8 @@ class Group(models.Model):
 
 class Permission(models.Model):
     """权限"""
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, db_constraint=False)
     name = models.CharField('权限名', max_length=31)
-    group = models.ManyToManyField(Group, db_constraint=False)
 
 
 class User(models.Model):

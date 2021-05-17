@@ -3,9 +3,12 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Optional
 
+from markdown2 import Markdown
+
 from django.views import View
-from django.http import JsonResponse
 from django.db.models import F
+from django.http import JsonResponse
+from django.utils.html import strip_tags
 
 from blog import tool
 from blog.models import Article, Category, Tag
@@ -31,6 +34,9 @@ class ArticleView(View):
         tool.check_require_param(id=article_id)
         # 获取文章
         article: Article = Article.objects.get(pk=article_id)
+        # 获取对应标签名称
+        tags: list[dict] = Tag.objects.filter(id__in=article.tags).values('name')
+        tag_names: list[str] = [tag['name'] for tag in tags]
 
         response = {
             'ret': 0,
@@ -40,7 +46,7 @@ class ArticleView(View):
                 'body': article.body,
                 'category_id': article.category_id,
                 'category_name': article.category.name,
-                'tags': article.tags
+                'tags': tag_names
             }
         }
         # 如果前台访问，访问数加1，并返回访问统计数据
@@ -60,7 +66,7 @@ class ArticleView(View):
         title: str = params.get('title')
         body: str = params.get('body')
         category_id = params.get('category_id', 0)
-        tags: list[int, str] = params.get('tags', [])
+        tag_names: list[str] = params.get('tags', [])
         tool.check_require_param(title=title, body=body)
 
         # 分类存在时取对应分类，不存在则使用未分类。!!如果分类里不存在未分类，则可能抛出异常
@@ -70,13 +76,13 @@ class ArticleView(View):
         else:
             category = Category.objects.filter(name='未分类').get()
 
-        # 处理未创建的标签
-        tool.handle_not_exist_tags(tags)
+        # 处理标签
+        ids_of_tags: list[int] = self.tag_names_to_ids(tag_names)
         # 生成摘要
-        excerpt: str = tool.md_body_to_excerpt(body)
+        excerpt: str = self.md_body_to_excerpt(body)
         # 创建文章
         article: Article = Article.objects.create(title=title, body=body, excerpt=excerpt, category=category,
-                                                  tags=tags)
+                                                  tags=ids_of_tags)
         return JsonResponse({'ret': 0, 'msg': '新建成功', 'data': {'id': article.id}})
 
     @error_handler('article')
@@ -90,19 +96,19 @@ class ArticleView(View):
         title: str = params.get('title')
         body: str = params.get('body')
         category_id: int = params.get('category_id')
-        tags: list[int, str] = params.get('tags', [])
+        tag_names: list[str] = params.get('tags', [])
         tool.check_require_param(id=article_id, title=title, body=body, category=category_id)
-        # 处理未创建的标签
-        tool.handle_not_exist_tags(tags)
+        # 处理标签
+        ids_of_tags: list[int] = self.tag_names_to_ids(tag_names)
         # 生成摘要
-        excerpt: str = tool.md_body_to_excerpt(body)
+        excerpt: str = self.md_body_to_excerpt(body)
         # 获取文章并修改
         article: Article = Article.objects.get(pk=article_id)
         article.title = title
         article.body = body
         article.excerpt = excerpt
         article.category_id = category_id
-        article.tags = tags
+        article.tags = ids_of_tags
         article.save()
         return JsonResponse({'ret': 0, 'msg': '修改成功'})
 
@@ -121,6 +127,39 @@ class ArticleView(View):
         # 清理redis访问统计
         redis.hdel(RedisKey.BLOG_ARTICLE_VISIT, article_id)
         return JsonResponse({'ret': 0, 'msg': '删除成功'})
+
+    def tag_names_to_ids(self, tag_names: list[str]) -> list[int]:
+        """给定标签name列表，返回id列表，如果标签name不存在，则创建，最多执行3次db"""
+        if not tag_names:
+            return []
+
+        # 查出所有标签
+        db_tags: QuerySet[dict] = Tag.objects.values('name')
+        names_of_db_tags: list[str] = [tag['name'] for tag in db_tags]
+
+        # 找出不存在的标签名称
+        tags_not_exist_in_db: list[str] = []
+        for name in tag_names:
+            if name not in names_of_db_tags:
+                tags_not_exist_in_db.append(name)
+
+        # 保存新标签
+        if tags_not_exist_in_db:
+            objs: list[Tag] = [Tag(name=name) for name in tags_not_exist_in_db]
+            Tag.objects.bulk_create(objs)
+        tags_of_article: list[dict] = Tag.objects.filter(name__in=tag_names).values('id')
+
+        # 获取标签ids
+        ids: list[int] = [tag['id'] for tag in tags_of_article]
+        return ids
+
+    def md_body_to_excerpt(self, md_body: str, length: int = 180) -> str:
+        """md源文本转成html后去除标签，再去掉换行，生成摘要"""
+        md: Markdown = Markdown()
+        body_with_html_tag: str = md.convert(md_body)
+        excerpt: str = strip_tags(body_with_html_tag)
+        excerpt = excerpt.replace('\n', ' ')
+        return excerpt[:length]
 
 
 class ArticlesView(View):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from typing import TYPE_CHECKING
 
 from django.views import View
@@ -33,7 +34,7 @@ class UserView(View):
                 'ret': 10010,
                 'msg': '用户名已存在'
             })
-        password_md5: str = tool.password_to_md5(password)
+        password_md5: str = self.password_to_md5(password)
         User.objects.create(username=username, password=password_md5)
         return JsonResponse({
             'ret': 0,
@@ -47,7 +48,7 @@ class UserView(View):
         password: str = str(params.get('password'))
         tool.check_require_param(username=username, password=password)
         user = User.objects.get(username=username)
-        user.password = tool.password_to_md5(password)
+        user.password = self.password_to_md5(password)
         user.save()
         return JsonResponse({
             'ret': 0,
@@ -64,6 +65,14 @@ class UserView(View):
             'ret': 0,
             'msg': '删除成功'
         })
+
+    def password_to_md5(self, password: str):
+        m = hashlib.md5()
+        password_encoded: bytes = password.encode(encoding='utf-8')
+        m.update(password_encoded)
+        # 32个字符，128位
+        password_md5: str = m.hexdigest()
+        return password_md5
 
 
 class UsersView(View):

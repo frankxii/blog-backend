@@ -59,7 +59,7 @@ class BaseView(View):
         """传入必要参数，如果为空就抛出异常"""
         for key, value in kwargs.items():
             if not value:
-                raise ValueError('{0}不能为空'.format(key))
+                raise ValueError('缺少必要参数{0}'.format(key))
 
     def success(self, data):
         return JsonResponse({

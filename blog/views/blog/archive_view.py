@@ -20,10 +20,15 @@ class ArchiveView(BaseView):
         params: QueryDict = request.GET
         cate = params.get('cate', 'category')
         if cate == 'category':
-            archive: QuerySet = Article.objects.values('category__name').annotate(
+            archive: QuerySet[dict] = Article.objects.values('category__name').annotate(
                 name=F('category__name'),
-                count=Count('category')
+                count=Count('*')
             ).values('name', 'count')
+            # 处理未分类
+            for category in archive:
+                if category['name'] is None:
+                    category['name'] = '未分类'
+                    break
             return self.success(list(archive))
         elif cate == 'tag':
             # 取出所有文章用到的标签

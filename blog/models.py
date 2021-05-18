@@ -7,7 +7,7 @@ class Article(models.Model):
     title = models.CharField(max_length=255, verbose_name='标题', default='')
     body = models.TextField('内容')
     excerpt = models.CharField(max_length=255, verbose_name='摘要', default='')
-    category = models.ForeignKey('Category', on_delete=models.CASCADE, db_constraint=False)
+    category = models.ForeignKey('Category', null=True, on_delete=models.SET_NULL)
     # tags => [tag_id, tag_id, tag_id]
     tags = models.JSONField(default=list)
     create_time = models.DateTimeField(auto_now_add=True)

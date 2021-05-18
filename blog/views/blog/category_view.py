@@ -54,5 +54,11 @@ class CategoriesView(BaseView):
     view_name = '分类列表'
 
     def get(self, request: HttpRequest):
+        params: QueryDict = request.GET
+        uncategorized: bool = params.get('uncategorized', 'true')
         categories: QueryDict[dict] = Category.objects.values('id', 'name')
-        return self.success(list(categories))
+        categories: list[dict] = list(categories)
+        if uncategorized == 'true':
+            # 添加未分类
+            categories.insert(0, {'id': 0, 'name': '未分类'})
+        return self.success(categories)

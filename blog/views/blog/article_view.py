@@ -5,8 +5,10 @@ from typing import TYPE_CHECKING, Optional
 
 from markdown2 import Markdown
 
-from django.db.models import F
+from django.db.models import F, Q
+from django.db import models
 from django.utils.html import strip_tags
+from django.http import JsonResponse
 
 from blog import redis
 from blog.app import RedisKey
@@ -32,11 +34,16 @@ class ArticleView(BaseView):
         tags: list[dict] = Tag.objects.filter(id__in=article.tags).values('name')
         tag_names: list[str] = [tag['name'] for tag in tags]
 
+        # 处理没有分类的情况
+        category: Optional[Category] = article.category
+        category_id: int = category.id if category else 0
+        category_name: str = category.name if category else '未分类'
+        # 构造响应数据
         data = {
             'title': article.title,
             'body': article.body,
-            'category_id': article.category_id,
-            'category_name': article.category.name,
+            'category_id': category_id,
+            'category_name': category_name,
             'tags': tag_names
         }
         # 如果前台访问，访问数加1，并返回访问统计数据
@@ -55,19 +62,24 @@ class ArticleView(BaseView):
         tag_names: list[str] = params.get('tags', [])
         self.required(title=title, body=body)
 
-        # 分类存在时取对应分类，不存在则使用未分类。!!如果分类里不存在未分类，则可能抛出异常
-        category: QuerySet = Category.objects.filter(pk=category_id)
-        if category.exists():
-            category = category.get()
+        # 分类存在时取对应分类，不存在则使用未分类。
+        if category_id:
+            try:
+                category = Category.objects.get(pk=category_id)
+            except models.ObjectDoesNotExist:
+                category = None
         else:
-            category = Category.objects.filter(name='未分类').get()
-
+            category = None
         # 处理标签
         ids_of_tags: list[int] = self.tag_names_to_ids(tag_names)
         # 生成摘要
         excerpt: str = self.md_body_to_excerpt(body)
         # 创建文章
-        Article.objects.create(title=title, body=body, excerpt=excerpt, category=category, tags=ids_of_tags)
+        article: Article = Article.objects.create(
+            title=title, body=body, excerpt=excerpt, category=category, tags=ids_of_tags
+        )
+        # 返回新建文章id给前端，让用户可以继续编辑
+        return JsonResponse({'ret': 0, 'msg': '文章创建成功', 'data': {'id': article.id}})
 
     def put(self, request: HttpRequest):
         # 获取参数并校验
@@ -75,9 +87,14 @@ class ArticleView(BaseView):
         article_id: int = params.get('id')
         title: str = params.get('title')
         body: str = params.get('body')
-        category_id: int = params.get('category_id')
+        category_id: int = params.get('category_id', 0)
+        category: Optional[Category]
+        if category_id:
+            category = Category.objects.get(pk=category_id)
+        else:
+            category = None
         tag_names: list[str] = params.get('tags', [])
-        self.required(id=article_id, title=title, body=body, category=category_id)
+        self.required(id=article_id, title=title, body=body)
         # 处理标签
         ids_of_tags: list[int] = self.tag_names_to_ids(tag_names)
         # 生成摘要
@@ -87,7 +104,7 @@ class ArticleView(BaseView):
         article.title = title
         article.body = body
         article.excerpt = excerpt
-        article.category_id = category_id
+        article.category = category
         article.tags = ids_of_tags
         article.save()
 
@@ -145,9 +162,7 @@ class ArticlesView(BaseView):
         """
         params: QueryDict = request.GET
         # 获取全部文章
-        article_list: QuerySet = Article.objects.annotate(category_name=F('category__name')).values(
-            'id', 'title', 'excerpt', 'category_name', 'tags', 'create_time', 'update_time'
-        ).all()
+        article_list: QuerySet[Article] = Article.objects.all()
 
         filters_str: str = params.get('filters', '')
         filters: dict = json.loads(filters_str) if filters_str else {}
@@ -161,16 +176,39 @@ class ArticlesView(BaseView):
         tag_name_filter: Optional[str] = filters.get('tag_name', '')
 
         if category_id_filter:
-            article_list = article_list.filter(category__in=category_id_filter)
+            conditions: list = []
+            # id为0表示未分类
+            if 0 in category_id_filter:
+                category_id_filter.remove(0)
+                conditions.append(Q(category=None))
+            # 其他分类id
+            if category_id_filter:
+                conditions.append(Q(category__in=category_id_filter))
+            # 如果有两个条件，表示有未分类又有正常分类，执行OR操作
+            condition: Q = conditions[0] if len(conditions) == 1 else conditions[0] | conditions[1]
+            article_list = article_list.filter(condition)
         if tag_id_filter:
-            article_list = article_list.filter(tags__contains=tag_id_filter)
+            # 所有条件执行OR操作
+            conditions: list = []
+            for tag_id in tag_id_filter:
+                conditions.append(Q(tags__contains=tag_id))
+            condition: Q = conditions[0]
+            for item in conditions[1:]:
+                condition |= item
+            article_list = article_list.filter(condition)
         if category_name_filter:
-            article_list = article_list.filter(category__name=category_name_filter)
+            if category_name_filter == '未分类':
+                article_list = article_list.filter(category=None)
+            else:
+                article_list = article_list.filter(category__name=category_name_filter)
         if tag_name_filter:
-            tag = Tag.objects.filter(name=tag_name_filter).get()
+            tag: Tag = Tag.objects.get(name=tag_name_filter)
             article_list = article_list.filter(tags__contains=tag.id)
 
-        article_list = article_list.order_by('-update_time')
+        article_list: QuerySet[Article] = article_list.order_by('-update_time')
+        article_list: QuerySet[dict] = article_list.annotate(category_name=F('category__name')).values(
+            'id', 'title', 'excerpt', 'category_name', 'tags', 'create_time', 'update_time'
+        )
 
         # 获取总条数
         total: int = article_list.count()
@@ -188,18 +226,23 @@ class ArticlesView(BaseView):
 
         # 格式化日期
         self.format_datetime_to_str(records, 'create_time', 'update_time')
+        # 处理未分类
+        for record in records:
+            if record['category_name'] is None:
+                record['category_name'] = '未分类'
 
         # 从redis取文章访问统计
         article_ids: list = []
         for record in records:
             article_ids.append(record['id'])
-        visit_counts = redis.hmget(RedisKey.BLOG_ARTICLE_VISIT, article_ids)
-        for index, count in enumerate(visit_counts):
-            if count is None:
-                count = 0
-            else:
-                count = int(count)
-            records[index]['visit'] = count
+        if article_ids:
+            visit_counts = redis.hmget(RedisKey.BLOG_ARTICLE_VISIT, article_ids)
+            for index, count in enumerate(visit_counts):
+                if count is None:
+                    count = 0
+                else:
+                    count = int(count)
+                records[index]['visit'] = count
         return self.success({
             'total': total,
             'current': current,

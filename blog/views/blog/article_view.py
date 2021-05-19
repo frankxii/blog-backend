@@ -164,21 +164,41 @@ class ArticlesView(BaseView):
         """
         params: QueryDict = request.GET
         # 获取全部文章
-        article_list: QuerySet[Article] = Article.objects
+        articles: QuerySet[Article] = Article.objects
 
+        # 处理筛选
         filters_str: str = params.get('filters', '')
         filters: dict = json.loads(filters_str) if filters_str else {}
+        articles = self.handle_filters(articles, filters)
+        # 排序
+        articles = articles.order_by('-update_time')
+        articles: QuerySet[dict] = articles.annotate(category_name=F('category__name')).values(
+            'id', 'title', 'excerpt', 'category_name', 'tags', 'create_time', 'update_time'
+        )
+
+        # 处理分页
+        pagination_str: str = params.get('pagination', '')
+        records, [total, current, page_size] = self.handle_pagination(articles, pagination_str)
+
+        # 格式化日期
+        self.format_datetime_to_str(records, 'create_time', 'update_time')
+        # 处理未分类
+        for record in records:
+            if record['category_name'] is None:
+                record['category_name'] = '未分类'
+
+        # 写入文章访问数统计
+        self.handle_visit_count(records)
+        return self.success({
+            'total': total,
+            'current': current,
+            'page_size': page_size,
+            'lists': list(records)
+        })
+
+    def handle_filters(self, records: QuerySet[Article], filters: dict) -> QuerySet[Article]:
         # 后台分类id筛选
         category_id_filter: list = filters.get('category_ids', [])
-        # 后台标签id筛选
-        tag_id_filter: list = filters.get('tag_ids', [])
-        # 前台分类name筛选
-        category_name_filter: str = filters.get('category_name', '')
-        # 前台标签name筛选
-        tag_name_filter: str = filters.get('tag_name', '')
-        # 前台月份筛选
-        month_filter: str = filters.get('month', '')
-
         if category_id_filter:
             conditions: list = []
             # id为0表示未分类
@@ -190,7 +210,9 @@ class ArticlesView(BaseView):
                 conditions.append(Q(category__in=category_id_filter))
             # 如果有两个条件，表示有未分类又有正常分类，执行OR操作
             condition: Q = conditions[0] if len(conditions) == 1 else conditions[0] | conditions[1]
-            article_list = article_list.filter(condition)
+            records = records.filter(condition)
+        # 后台标签id筛选
+        tag_id_filter: list = filters.get('tag_ids', [])
         if tag_id_filter:
             # 所有条件执行OR操作
             conditions: list = []
@@ -199,63 +221,45 @@ class ArticlesView(BaseView):
             condition: Q = conditions[0]
             for item in conditions[1:]:
                 condition |= item
-            article_list = article_list.filter(condition)
+            records = records.filter(condition)
+        # 前台分类name筛选
+        category_name_filter: str = filters.get('category_name', '')
         if category_name_filter:
             if category_name_filter == '未分类':
-                article_list = article_list.filter(category=None)
+                records = records.filter(category=None)
             else:
-                article_list = article_list.filter(category__name=category_name_filter)
+                records = records.filter(category__name=category_name_filter)
+        # 前台标签name筛选
+        tag_name_filter: str = filters.get('tag_name', '')
         if tag_name_filter:
             tag: Tag = Tag.objects.get(name=tag_name_filter)
-            article_list = article_list.filter(tags__contains=tag.id)
+            records = records.filter(tags__contains=tag.id)
+        # 前台月份筛选
+        month_filter: str = filters.get('month', '')
         if month_filter:
             print('filter')
             if len(month_filter) not in [6, 7]:
                 return self.success([])
             month: datetime = datetime.strptime(month_filter, '%Y-%m')
-            article_list = article_list.annotate(month=TruncMonth('create_time')).filter(month=month)
+            records = records.annotate(month=TruncMonth('create_time')).filter(month=month)
 
-        article_list: QuerySet[Article] = article_list.order_by('-update_time')
-        article_list: QuerySet[dict] = article_list.annotate(category_name=F('category__name')).values(
-            'id', 'title', 'excerpt', 'category_name', 'tags', 'create_time', 'update_time'
-        )
+        return records
 
-        # 获取总条数
-        total: int = article_list.count()
-        # 计算分页切片索引
-        pagination_str = params.get('pagination', '')
-        current: int = 1
-        page_size: int = 5
-        if pagination_str:
-            pagination: dict = json.loads(pagination_str)
-            current = pagination.get('current', current)
-            page_size = pagination.get('page_size', page_size)
-        top: int = (current - 1) * page_size
-        bottom: int = top + page_size
-        records: list[dict] = list(article_list[top:bottom])
-
-        # 格式化日期
-        self.format_datetime_to_str(records, 'create_time', 'update_time')
-        # 处理未分类
+    def handle_visit_count(self, records: QuerySet[dict]):
+        """
+        处理文章访问数统计，使用引用传递，结果直接写入到record中
+        Args:
+            records: orm查询结果
+        """
+        records_ids: list = []
         for record in records:
-            if record['category_name'] is None:
-                record['category_name'] = '未分类'
-
-        # 从redis取文章访问统计
-        article_ids: list = []
-        for record in records:
-            article_ids.append(record['id'])
-        if article_ids:
-            visit_counts = redis.hmget(RedisKey.BLOG_ARTICLE_VISIT, article_ids)
+            records_ids.append(record['id'])
+        if records_ids:
+            # 从redis取文章访问统计
+            visit_counts = redis.hmget(RedisKey.BLOG_ARTICLE_VISIT, records_ids)
             for index, count in enumerate(visit_counts):
                 if count is None:
                     count = 0
                 else:
                     count = int(count)
                 records[index]['visit'] = count
-        return self.success({
-            'total': total,
-            'current': current,
-            'page_size': page_size,
-            'lists': records
-        })

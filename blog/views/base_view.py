@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import json
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from django.views import View
 from django.http import JsonResponse
@@ -80,3 +81,18 @@ class BaseView(View):
             for field in fields:
                 time_field: datetime = record.get(field)
                 record[field] = str(time_field.replace(microsecond=0))
+
+    def handle_pagination(self, records: QuerySet, pagination_str: str) -> (QuerySet, list):
+        # 获取总条数
+        total: int = records.count()
+        # 计算分页切片索引
+        current: int = 1
+        page_size: int = 5
+        if pagination_str:
+            pagination: dict = json.loads(pagination_str)
+            current = pagination.get('current', current)
+            page_size = pagination.get('page_size', page_size)
+        top: int = (current - 1) * page_size
+        bottom: int = top + page_size
+        records = records[top:bottom]
+        return records, [total, current, page_size]

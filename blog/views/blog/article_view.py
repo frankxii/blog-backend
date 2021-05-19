@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
+from django.db.models.functions import TruncMonth
 from markdown2 import Markdown
 
 from django.db.models import F, Q
@@ -162,18 +164,20 @@ class ArticlesView(BaseView):
         """
         params: QueryDict = request.GET
         # 获取全部文章
-        article_list: QuerySet[Article] = Article.objects.all()
+        article_list: QuerySet[Article] = Article.objects
 
         filters_str: str = params.get('filters', '')
         filters: dict = json.loads(filters_str) if filters_str else {}
         # 后台分类id筛选
-        category_id_filter: Optional[list] = filters.get('category_ids', [])
+        category_id_filter: list = filters.get('category_ids', [])
         # 后台标签id筛选
-        tag_id_filter: Optional[list] = filters.get('tag_ids', [])
+        tag_id_filter: list = filters.get('tag_ids', [])
         # 前台分类name筛选
-        category_name_filter: Optional[str] = filters.get('category_name', '')
+        category_name_filter: str = filters.get('category_name', '')
         # 前台标签name筛选
-        tag_name_filter: Optional[str] = filters.get('tag_name', '')
+        tag_name_filter: str = filters.get('tag_name', '')
+        # 前台月份筛选
+        month_filter: str = filters.get('month', '')
 
         if category_id_filter:
             conditions: list = []
@@ -204,6 +208,12 @@ class ArticlesView(BaseView):
         if tag_name_filter:
             tag: Tag = Tag.objects.get(name=tag_name_filter)
             article_list = article_list.filter(tags__contains=tag.id)
+        if month_filter:
+            print('filter')
+            if len(month_filter) not in [6, 7]:
+                return self.success([])
+            month: datetime = datetime.strptime(month_filter, '%Y-%m')
+            article_list = article_list.annotate(month=TruncMonth('create_time')).filter(month=month)
 
         article_list: QuerySet[Article] = article_list.order_by('-update_time')
         article_list: QuerySet[dict] = article_list.annotate(category_name=F('category__name')).values(

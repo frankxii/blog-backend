@@ -42,6 +42,7 @@ class User(models.Model):
     username = models.CharField('用户名', max_length=15, unique=True)
     password = models.CharField('密码', max_length=128)
     is_active = models.BooleanField('激活', default=True)
+    is_admin = models.BooleanField('管理员', default=False)
     last_login = models.DateTimeField('上次登录时间', default=timezone.now)
     create_time = models.DateTimeField('创建时间', default=timezone.now)
     group = models.ManyToManyField(Group, db_constraint=False)

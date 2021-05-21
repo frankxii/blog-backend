@@ -13,7 +13,7 @@ from django.utils.html import strip_tags
 from django.http import JsonResponse
 
 from blog import redis
-from blog.app import RedisKey
+from blog.services import RedisKey
 from blog.views.base_view import BaseView
 from blog.models import Article, Category, Tag
 
@@ -237,7 +237,6 @@ class ArticlesView(BaseView):
         # 前台月份筛选
         month_filter: str = filters.get('month', '')
         if month_filter:
-            print('filter')
             if len(month_filter) not in [6, 7]:
                 return self.success([])
             month: datetime = datetime.strptime(month_filter, '%Y-%m')

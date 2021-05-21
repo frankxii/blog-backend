@@ -80,6 +80,17 @@ class DataProcessingMixin:
         records = records[top:bottom]
         return records, [total, current, page_size]
 
+    def get_keys_of_user(self, user: User) -> list[str]:
+        groups: QuerySet[Group] = user.group.all()
+        if not groups.exists():
+            return []
+        records: list[dict] = []
+        for group in groups:
+            records.extend(group.permission_set.values('name'))
+        # keys里面只有操作权限，没包含页面权限
+        keys: list[str] = [record['name'] for record in records]
+        return keys
+
 
 class BaseView(View, TokenMixin, ResponseMixin, DataProcessingMixin):
     view_name = ''
@@ -138,20 +149,20 @@ class BaseView(View, TokenMixin, ResponseMixin, DataProcessingMixin):
             return self.fail(10001, '服务器错误')
 
     def _verify_token_and_permission(self, request: HttpRequest, handler: Callable) -> Optional[JsonResponse]:
-        """在执行view之前校验token有效性和有权限有效性"""
-        url: str = request.get_raw_uri()
-        # 不校验前端路由
-        if 'front' in url:
+        """在执行view之前校验token有效性和权限有效性"""
+        path: str = request.path
+        # 前端接口和登录接口不需要验证token和权限
+        if 'front' in path or 'token' in path:
             return
 
+        # 校验token
+        if response := self._verify_token(request):
+            return response
         # qualified_name e.g. GroupsView.get
         qualified_name: str = handler.__qualname__
         authority_key: str = qualified_key_mapping.get(qualified_name, '')
         # 如果获取到key，说明接口需要权限可以才能访问
         if authority_key:
-            # 校验token
-            if response := self._verify_token(request):
-                return response
             # 校验用户权限
             if response := self._verify_user_permission(authority_key):
                 return response
@@ -187,19 +198,16 @@ class BaseView(View, TokenMixin, ResponseMixin, DataProcessingMixin):
         """校验用户权限 success -> None  fail -> response"""
         try:
             user_id: int = self.payload.get('id')
-            # 校验用户是否合法
+            # 校验用户是否存在
             user: User = User.objects.get(id=user_id)
             # 断言失败会抛出AssertionError
             assert user.is_active
-            groups: QuerySet[Group] = user.group.all()
-            if not groups.exists():
-                raise PermissionError
-            # 校验用户权限
-            records = []
-            for group in groups:
-                records.extend(group.permission_set.values('name'))
-            keys = [record['name'] for record in records]
-            if authority_key not in keys:
+            # 管理员不校验权限
+            if user.is_admin:
+                return
+            # 如果没有权限key或者没有包含接口的key，则鉴权失败
+            keys: list[str] = self.get_keys_of_user(user)
+            if not keys or authority_key not in keys:
                 raise PermissionError
         except AssertionError:
             return self.fail(10030, '用户已被冻结')

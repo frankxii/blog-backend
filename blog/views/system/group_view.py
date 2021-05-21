@@ -20,7 +20,7 @@ class GroupView(BaseView):
         name: str = params.get('name')
         self.required(name=name)
         if Group.objects.filter(name=name).exists():
-            return self.fail(10010, '组名已存在')
+            return self.fail(10022, '组名已存在')
         Group.objects.create(name=name)
 
     def put(self, request: HttpRequest):
@@ -32,7 +32,7 @@ class GroupView(BaseView):
         # 判断组名是否重复
         name_exist: bool = Group.objects.exclude(pk=group.id).filter(name=group_name).exists()
         if name_exist:
-            return self.fail(10010, '组名已存在')
+            return self.fail(10022, '组名已存在')
         group.name = group_name
         group.save()
 

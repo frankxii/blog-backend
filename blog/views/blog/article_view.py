@@ -10,7 +10,6 @@ from markdown2 import Markdown
 from django.db.models import F, Q
 from django.db import models
 from django.utils.html import strip_tags
-from django.http import JsonResponse
 
 from blog import redis
 from blog.services import RedisKey
@@ -81,7 +80,7 @@ class ArticleView(BaseView):
             title=title, body=body, excerpt=excerpt, category=category, tags=ids_of_tags
         )
         # 返回新建文章id给前端，让用户可以继续编辑
-        return JsonResponse({'ret': 0, 'msg': '文章创建成功', 'data': {'id': article.id}})
+        return self.success({'id': article.id}, '文章创建成功')
 
     def put(self, request: HttpRequest):
         # 获取参数并校验

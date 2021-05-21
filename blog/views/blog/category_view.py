@@ -26,7 +26,7 @@ class CategoryView(BaseView):
         self.required(name=name)
         is_category_exist: bool = Category.objects.filter(name=name).exists()
         if is_category_exist:
-            return self.fail(10030, '分类名已存在')
+            return self.fail(10022, '分类名重复')
         Category.objects.create(name=name)
 
     def put(self, request: HttpRequest):
@@ -38,7 +38,7 @@ class CategoryView(BaseView):
         # 有除本条记录外重名的存在，就返回response
         is_category_exist: bool = Category.objects.exclude(pk=category_id).filter(name=name).exists()
         if is_category_exist:
-            return self.fail(10030, '分类名已存在')
+            return self.fail(10022, '分类名重复')
         category.name = name
         category.save()
 

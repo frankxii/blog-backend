@@ -4,6 +4,7 @@ from blog.views.blog.category_view import CategoryView, CategoriesView
 from blog.views.system.group_view import GroupView, GroupsView, GroupMembersView, GroupPermissionView
 from blog.views.system.menu_view import MenuView
 from blog.views.system.permission_view import PermissionTreeView
+from blog.views.system.token_view import TokenView
 from blog.views.system.user_view import UserView, UsersView, UserSearchListView
 
 from blog.views.blog.article_view import ArticlesView, ArticleView
@@ -13,6 +14,7 @@ urlpatterns = [
     path('system/user', UserView.as_view()),
     path('system/users', UsersView.as_view()),
     path('system/user/searchList', UserSearchListView.as_view()),
+    path('system/user/token', TokenView.as_view()),
     # 权限组
     path('system/group', GroupView.as_view()),
     path('system/groups', GroupsView.as_view()),

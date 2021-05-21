@@ -9,19 +9,29 @@
         "link": "/system/user",
         "children": [
           {
+            "key": "system_user_list",
+            "title": "列表",
+            "qualified": "UsersView.get"
+          },
+          {
             "key": "system_user_add",
             "title": "新增",
-            "children": []
+            "qualified": "UserView.post"
           },
           {
             "key": "system_user_freeze",
             "title": "冻结",
-            "children": []
+            "qualified": ""
+          },
+          {
+            "key": "system_user_update",
+            "title": "修改",
+            "qualified": "UserView.put"
           },
           {
             "key": "system_user_delete",
             "title": "删除",
-            "children": []
+            "qualified": "UserView.delete"
           }
         ]
       },
@@ -31,24 +41,39 @@
         "link": "/system/group",
         "children": [
           {
+            "key": "system_group_list",
+            "title": "列表",
+            "qualified": "GroupsView.get"
+          },
+          {
             "key": "system_group_add",
             "title": "新增",
-            "children": []
+            "qualified": "GroupView.post"
           },
           {
             "key": "system_group_delete",
             "title": "删除",
-            "children": []
+            "qualified": "GroupView.delete"
           },
           {
-            "key": "system_group_member",
-            "title": "成员维护",
-            "children": []
+            "key": "system_group_member_list",
+            "title": "成员列表",
+            "qualified": "GroupMembersView.get"
           },
           {
-            "key": "system_group_setting",
-            "title": "权限设置",
-            "children": []
+            "key": "system_group_member_update",
+            "title": "成员管理",
+            "qualified": "GroupMembersView.put"
+          },
+          {
+            "key": "system_group_permission_list",
+            "title": "权限列表",
+            "qualified": "GroupPermissionView.get"
+          },
+          {
+            "key": "system_group_permission_update",
+            "title": "权限修改",
+            "qualified": "GroupPermissionView.put"
           }
         ]
       }
@@ -64,19 +89,29 @@
         "link": "/blog/article",
         "children": [
           {
+            "key": "blog_article_list",
+            "title": "列表",
+            "qualified": "ArticlesView.get"
+          },
+          {
+            "key": "blog_article_get",
+            "title": "详情",
+            "qualified": "ArticleView.get"
+          },
+          {
             "key": "blog_article_add",
             "title": "新增",
-            "children": []
+            "qualified": "ArticleView.post"
           },
           {
             "key": "blog_article_edit",
             "title": "编辑",
-            "children": []
+            "qualified": "ArticleView.put"
           },
           {
             "key": "blog_article_delete",
             "title": "删除",
-            "children": []
+            "qualified": "ArticleView.delete"
           }
         ]
       },
@@ -86,19 +121,29 @@
         "link": "/blog/category",
         "children": [
           {
+            "key": "blog_category_list",
+            "title": "列表",
+            "qualified": "CategoriesView.get"
+          },
+          {
+            "key": "blog_category_detail",
+            "title": "详情",
+            "qualified": "CategoryView.get"
+          },
+          {
             "key": "blog_category_add",
             "title": "新增",
-            "children": []
+            "qualified": "CategoryView.post"
           },
           {
             "key": "blog_category_edit",
             "title": "编辑",
-            "children": []
+            "qualified": "CategoryView.put"
           },
           {
             "key": "blog_category_delete",
             "title": "删除",
-            "children": []
+            "qualified": "CategoryView.delete"
           }
         ]
       }

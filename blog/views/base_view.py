@@ -139,6 +139,11 @@ class BaseView(View, TokenMixin, ResponseMixin, DataProcessingMixin):
 
     def _verify_token_and_permission(self, request: HttpRequest, handler: Callable) -> Optional[JsonResponse]:
         """在执行view之前校验token有效性和有权限有效性"""
+        url: str = request.get_raw_uri()
+        # 不校验前端路由
+        if 'front' in url:
+            return
+
         # qualified_name e.g. GroupsView.get
         qualified_name: str = handler.__qualname__
         authority_key: str = qualified_key_mapping.get(qualified_name, '')

@@ -175,24 +175,24 @@ class ArticlesView(BaseView):
             'id', 'title', 'excerpt', 'category_name', 'tags', 'create_time', 'update_time'
         )
 
-        # 处理分页
-        pagination_str: str = params.get('pagination', '')
-        records, [total, current, page_size] = self.handle_pagination(articles, pagination_str)
+        # 处理分页 05-22 去掉后端分页 提高体验
+        # pagination_str: str = params.get('pagination', '')
+        # records, [total, current, page_size] = self.handle_pagination(articles, pagination_str)
 
         # 格式化日期
-        self.format_datetime_to_str(records, 'create_time', 'update_time')
+        self.format_datetime_to_str(articles, 'create_time', 'update_time')
         # 处理未分类
-        for record in records:
+        for record in articles:
             if record['category_name'] is None:
                 record['category_name'] = '未分类'
 
         # 写入文章访问数统计
-        self.handle_visit_count(records)
+        self.handle_visit_count(articles)
         return self.success({
-            'total': total,
-            'current': current,
-            'page_size': page_size,
-            'lists': list(records)
+            # 'total': total,
+            # 'current': current,
+            # 'page_size': page_size,
+            'lists': list(articles)
         })
 
     def handle_filters(self, records: QuerySet[Article], filters: dict) -> QuerySet[Article]:

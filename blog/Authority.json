@@ -21,7 +21,7 @@
           {
             "key": "system_user_freeze",
             "title": "冻结",
-            "qualified": ""
+            "qualified": "UserValidityView.put"
           },
           {
             "key": "system_user_update",

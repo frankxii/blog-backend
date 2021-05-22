@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from blog.models import User
 from blog.views.base_view import BaseView
+from django.db.models import ObjectDoesNotExist
 
 if TYPE_CHECKING:
     from django.http import HttpRequest
@@ -53,6 +54,25 @@ class UsersView(BaseView):
         user_lists: QuerySet[dict] = User.objects.values('id', 'username', 'last_login', 'create_time', 'is_active')
         self.format_datetime_to_str(user_lists, 'create_time', 'last_login')
         return self.success(list(user_lists))
+
+
+class UserValidityView(BaseView):
+    """激活或冻结用户权限"""
+    view_name = '权限'
+
+    def put(self, request: HttpRequest):
+        params: dict = json.loads(request.body)
+        user_id: int = params.get('id')
+        active: bool = params.get('active', False)
+        self.required(id=user_id)
+        try:
+            user: User = User.objects.get(id=user_id)
+            # 冻结或激活用户权限
+            if user.is_active != active:
+                user.is_active = active
+                user.save()
+        except ObjectDoesNotExist:
+            return self.fail(10021, '用户不存在')
 
 
 class UserSearchListView(BaseView):

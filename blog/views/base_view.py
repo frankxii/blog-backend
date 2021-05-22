@@ -202,6 +202,9 @@ class BaseView(View, TokenMixin, ResponseMixin, DataProcessingMixin):
             user: User = User.objects.get(id=user_id)
             # 断言失败会抛出AssertionError
             assert user.is_active
+            # 更新最近登录时间
+            user.last_login = datetime.now()
+            user.save()
             # 管理员不校验权限
             if user.is_admin:
                 return

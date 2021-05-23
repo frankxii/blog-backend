@@ -35,6 +35,9 @@ class TokenView(BaseView):
                 'username': user.username,
             }
             token: str = self.encode_token(payload)
-            return self.success(token, '登录成功')
+            return self.success({
+                'token': token,
+                'username': user.username
+            }, '登录成功')
         except (ObjectDoesNotExist, AssertionError):
             return self.fail(10031, '用户名或密码错误')

@@ -1,6 +1,7 @@
 from django.urls import path
 
 from blog.views.blog.category_view import CategoryView, CategoriesView
+from blog.views.blog.mood_view import MoodView, MoodsView
 from blog.views.system.group_view import GroupView, GroupsView, GroupMembersView, GroupPermissionView
 from blog.views.system.menu_view import MenuView
 from blog.views.system.permission_view import PermissionTreeView
@@ -29,5 +30,8 @@ urlpatterns = [
     path('blog/article', ArticleView.as_view()),
     path('blog/articles', ArticlesView.as_view()),
     path('blog/category', CategoryView.as_view()),
-    path('blog/categories', CategoriesView.as_view())
+    path('blog/categories', CategoriesView.as_view()),
+    # 说说
+    path('blog/mood', MoodView.as_view()),
+    path('blog/moods', MoodsView.as_view())
 ]

@@ -146,6 +146,38 @@
             "qualified": "CategoryView.delete"
           }
         ]
+      },
+      {
+        "key": "blog_mood",
+        "title": "说说管理",
+        "link": "/blog/mood",
+        "children": [
+          {
+            "key": "blog_mood_list",
+            "title": "列表",
+            "qualified": "MoodsView.get"
+          },
+          {
+            "key": "blog_mood_detail",
+            "title": "详情",
+            "qualified": "MoodView.get"
+          },
+          {
+            "key": "blog_mood_add",
+            "title": "新增",
+            "qualified": "MoodView.post"
+          },
+          {
+            "key": "blog_mood_update",
+            "title": "修改",
+            "qualified": "MoodView.put"
+          },
+          {
+            "key": "blog_mood_delete",
+            "title": "删除",
+            "qualified": "MoodView.delete"
+          }
+        ]
       }
     ]
   }

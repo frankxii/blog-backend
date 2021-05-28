@@ -26,6 +26,14 @@ class Tag(models.Model):
     name = models.TextField('标签名称')
 
 
+class Mood(models.Model):
+    """说说"""
+    content = models.CharField(max_length=255, verbose_name='内容')
+    create_time = models.DateTimeField(default=timezone.now)
+    is_visible = models.BooleanField(default=True)
+    is_deleted = models.BooleanField(default=False)
+
+
 class Group(models.Model):
     """权限组"""
     name = models.CharField('组名', max_length=15, unique=True)

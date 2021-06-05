@@ -58,8 +58,11 @@ class MoodsView(BaseView):
 
     # TODO:加入ref公参后需要给前台的返回结果中去掉私密的说说
     def get(self, request: HttpRequest):
-        moods: QuerySet[dict] = Mood.objects.filter(is_deleted=False).values(
-            'id', 'content', 'create_time', 'is_visible'
+        moods: QuerySet[dict] = (
+            Mood.objects
+                .filter(is_deleted=False)
+                .order_by('-create_time')
+                .values('id', 'content', 'create_time', 'is_visible')
         )
         self.format_datetime_to_str(moods, 'create_time')
         return self.success(list(moods))
